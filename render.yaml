@@ -1,0 +1,44 @@
+services:
+  - type: web
+    name: billops
+    runtime: node
+    plan: starter
+    numInstances: 1
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm run start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: BILLOPS_DB_PATH
+        value: /var/data/billops.db
+      - key: BILLOPS_OUTBOX_DIR
+        value: /var/data/outbox
+      - key: BILLOPS_SEED_CATALOG
+        value: "true"
+      - key: EMAIL_PROVIDER
+        value: smtp
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "465"
+      - key: SMTP_SECURE
+        value: "true"
+      - key: BILLOPS_ADMIN_NAME
+        value: BillOps Admin
+      - key: CRON_SECRET
+        sync: false
+      - key: BILLOPS_ADMIN_EMAIL
+        sync: false
+      - key: BILLOPS_ADMIN_PASSWORD
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+    disk:
+      name: billops-data
+      mountPath: /var/data
+      sizeGB: 1
