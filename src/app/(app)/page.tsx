@@ -10,7 +10,7 @@ import {
 import SubmitButton from "@/components/SubmitButton";
 import { EmptyState, Flash, PageHeader, SectionTitle, StatCard } from "@/components/ui";
 import {
-  addMonths,
+  buildMonthList,
   currentMonthKey,
   dateForDay,
   formatDate,
@@ -102,16 +102,10 @@ export default async function DashboardPage({
   const progress = data.totals.activeBills
     ? Math.round((data.totals.paidThisMonth / data.totals.activeBills) * 100)
     : 0;
-  const months = Array.from(
-    new Set([
-      ...monthOptions(18),
-      addMonths(currentMonth, 1),
-      ...listMonthKeysWithCycles(24),
-      month,
-    ]),
-  )
-    .sort()
-    .reverse();
+  const months = buildMonthList(
+    [...monthOptions(12), ...listMonthKeysWithCycles(24)],
+    [month],
+  );
 
   return (
     <div className="space-y-7">

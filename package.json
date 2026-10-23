@@ -13,6 +13,7 @@
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "db:seed": "tsx scripts/seed.ts",
+    "mark-paid": "tsx scripts/mark-month-paid.ts",
     "daily": "tsx scripts/run-daily.ts",
     "worker": "tsx scripts/run-worker.ts"
   },

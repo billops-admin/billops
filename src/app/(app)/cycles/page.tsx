@@ -5,6 +5,7 @@ import { ApprovalBadge, HealthBadge, InvoiceBadge, PaymentBadge } from "@/compon
 import SubmitButton from "@/components/SubmitButton";
 import { EmptyState, Flash, PageHeader, StatCard } from "@/components/ui";
 import {
+  buildMonthList,
   currentMonthKey,
   dateForDay,
   formatDate,
@@ -98,11 +99,10 @@ export default async function CyclesPage({
     }
   });
 
-  const months = Array.from(
-    new Set([...monthOptions(12), ...listMonthKeysWithCycles(18), month]),
-  )
-    .sort()
-    .reverse();
+  const months = buildMonthList(
+    [...monthOptions(12), ...listMonthKeysWithCycles(18)],
+    [month],
+  );
 
   const redirectTo = `/cycles?month=${month}${
     statusFilter !== "all" ? `&status=${statusFilter}` : ""

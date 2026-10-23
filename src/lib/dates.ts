@@ -111,9 +111,31 @@ export function formatDateTime(value: string | null | undefined): string {
   }).format(date);
 }
 
-export function monthOptions(count = 12, timeZone = DEFAULT_TIMEZONE): string[] {
+export const BILLOPS_FIRST_MONTH = "2026-08";
+
+export function monthOptions(forwardMonths = 12, timeZone = DEFAULT_TIMEZONE): string[] {
   const current = currentMonthKey(timeZone);
-  return Array.from({ length: count }, (_, index) => addMonths(current, -index));
+  const latest = addMonths(current, forwardMonths);
+  const earliest =
+    compareIso(BILLOPS_FIRST_MONTH, latest) <= 0 ? BILLOPS_FIRST_MONTH : current;
+  const months: string[] = [];
+  for (let key = earliest; compareIso(key, latest) <= 0; key = addMonths(key, 1)) {
+    months.push(key);
+  }
+  return months.reverse();
+}
+
+export function buildMonthList(
+  keys: Array<string | null | undefined>,
+  extra: Array<string | null | undefined> = [],
+): string[] {
+  const set = new Set<string>();
+  for (const key of [...keys, ...extra]) {
+    if (key && /^\d{4}-\d{2}$/.test(key) && compareIso(key, BILLOPS_FIRST_MONTH) >= 0) {
+      set.add(key);
+    }
+  }
+  return Array.from(set).sort().reverse();
 }
 
 export function monthLabel(day: number): string {

@@ -7,6 +7,7 @@ services:
     buildCommand: npm ci --include=dev && npm run build
     startCommand: npm run start
     healthCheckPath: /api/health
+    initialDeployHook: npm run mark-paid -- 2026-10
     envVars:
       - key: NODE_VERSION
         value: "24"
