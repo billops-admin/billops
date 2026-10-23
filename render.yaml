@@ -1,8 +1,14 @@
+envVarGroups:
+  - name: billops-internal
+    envVars:
+      - key: CRON_SECRET
+        generateValue: true
+
 services:
   - type: web
     name: billops
     runtime: node
-    plan: starter
+    plan: 0.5c-512mb
     numInstances: 1
     buildCommand: npm ci --include=dev && npm run build
     startCommand: npm run start
@@ -17,6 +23,8 @@ services:
         value: /var/data/outbox
       - key: BILLOPS_SEED_CATALOG
         value: "true"
+      - key: BILLOPS_PENDING_BILLS
+        value: NetworkTech Lab
       - key: EMAIL_PROVIDER
         value: smtp
       - key: SMTP_HOST
@@ -27,8 +35,6 @@ services:
         value: "true"
       - key: BILLOPS_ADMIN_NAME
         value: BillOps Admin
-      - key: CRON_SECRET
-        sync: false
       - key: BILLOPS_ADMIN_EMAIL
         sync: false
       - key: BILLOPS_ADMIN_PASSWORD
@@ -39,7 +45,22 @@ services:
         sync: false
       - key: SMTP_FROM
         sync: false
+      - fromGroup: billops-internal
     disk:
       name: billops-data
       mountPath: /var/data
       sizeGB: 1
+
+  - type: cron
+    name: billops-scheduler
+    runtime: node
+    schedule: "*/15 * * * *"
+    buildCommand: npm ci --include=dev
+    startCommand: node scripts/cron-run.mjs
+    envVars:
+      - key: BILLOPS_WEB_HOSTPORT
+        fromService:
+          type: web
+          name: billops
+          property: hostport
+      - fromGroup: billops-internal
