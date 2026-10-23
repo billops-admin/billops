@@ -83,7 +83,7 @@ export function listBills(month = currentMonthKey()): BillRow[] {
             (SELECT COUNT(*) FROM reminder_rules rr WHERE rr.bill_id = b.id AND rr.is_active = 1) AS rule_count
        FROM bills b
        LEFT JOIN bill_cycles c ON c.bill_id = b.id AND c.billing_month = ?
-      ORDER BY b.is_active DESC, b.name COLLATE NOCASE`,
+      ORDER BY b.provider COLLATE NOCASE, b.name COLLATE NOCASE`,
     month,
   );
 
@@ -120,6 +120,24 @@ export function listBillsWithMeta(month = currentMonthKey()): BillWithMeta[] {
     ...row,
     health: deriveHealth(row, row.cycle, today),
   }));
+}
+
+export type BillGroup = { provider: string; bills: BillWithMeta[] };
+
+export function groupBillsByProvider(bills: BillWithMeta[]): BillGroup[] {
+  const groups = new Map<string, BillWithMeta[]>();
+  for (const bill of bills) {
+    const key = bill.provider.trim() || "Other";
+    const list = groups.get(key);
+    if (list) list.push(bill);
+    else groups.set(key, [bill]);
+  }
+  return Array.from(groups.entries())
+    .map(([provider, groupBills]) => ({
+      provider,
+      bills: [...groupBills].sort((a, b) => a.name.localeCompare(b.name)),
+    }))
+    .sort((a, b) => a.provider.localeCompare(b.provider));
 }
 
 export function getBill(id: number): Bill | undefined {
@@ -220,19 +238,21 @@ export function getDashboardData(month = currentMonthKey()): DashboardData {
     .filter(
       (bill) =>
         bill.health.overdue ||
-        bill.health.invoiceDelayed ||
         bill.health.paymentDueSoon ||
+        bill.cycle?.invoice_status === "awaiting" ||
         (bill.cycle?.approval_status === "pending" &&
           bill.cycle.invoice_status === "received"),
     )
     .sort((a, b) => {
       const score = (bill: BillWithMeta) =>
-        (bill.health.overdue ? 4 : 0) +
+        (bill.health.overdue ? 5 : 0) +
+        (bill.health.invoiceDelayed ? 4 : 0) +
         (bill.cycle?.approval_status === "pending" &&
         bill.cycle.invoice_status === "received"
           ? 3
           : 0) +
-        (bill.health.invoiceDelayed ? 2 : 0);
+        (bill.health.paymentDueSoon ? 2 : 0) +
+        (bill.cycle?.invoice_status === "awaiting" ? 1 : 0);
       return score(b) - score(a) || a.name.localeCompare(b.name);
     });
 

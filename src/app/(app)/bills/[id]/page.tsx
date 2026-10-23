@@ -109,7 +109,7 @@ export default async function BillDetailPage({
       <PageHeader
         eyebrow={`Bills / ${bill.category}`}
         title={bill.name}
-        description={`${bill.provider} · ${formatMonth(month)} cycle · ${bill.timezone}`}
+        description={`${bill.provider}${bill.account_number ? ` · A/C ${bill.account_number}` : ""} · ${formatMonth(month)} cycle · ${bill.timezone}`}
         actions={
           <>
             <BillStatusBadge status={bill.status} />

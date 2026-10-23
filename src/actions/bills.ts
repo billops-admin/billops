@@ -82,6 +82,7 @@ export async function createBillAction(formData: FormData): Promise<void> {
   const name = text(formData, "name");
   const provider = text(formData, "provider");
   const category = text(formData, "category");
+  const accountNumber = text(formData, "account_number") || null;
   const timezone = text(formData, "timezone") || "Asia/Kolkata";
   const notes = text(formData, "notes") || null;
 
@@ -115,12 +116,13 @@ export async function createBillAction(formData: FormData): Promise<void> {
   const billId = transaction(() => {
     const result = exec(
       `INSERT INTO bills (
-        name, provider, category, arrival_start_day, arrival_end_day,
+        name, provider, category, account_number, arrival_start_day, arrival_end_day,
         payment_target_day, payment_deadline_day, timezone, notes, status, is_active
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 1)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 1)`,
       name,
       provider,
       category,
+      accountNumber,
       arrivalStart,
       arrivalEnd,
       target,
@@ -166,6 +168,7 @@ export async function updateBillAction(formData: FormData): Promise<void> {
   const name = text(formData, "name");
   const provider = text(formData, "provider");
   const category = text(formData, "category");
+  const accountNumber = text(formData, "account_number") || null;
   const timezone = text(formData, "timezone") || "Asia/Kolkata";
   const notes = text(formData, "notes") || null;
 
@@ -190,13 +193,14 @@ export async function updateBillAction(formData: FormData): Promise<void> {
   transaction(() => {
     exec(
       `UPDATE bills
-          SET name = ?, provider = ?, category = ?, arrival_start_day = ?,
+          SET name = ?, provider = ?, category = ?, account_number = ?, arrival_start_day = ?,
               arrival_end_day = ?, payment_target_day = ?, payment_deadline_day = ?,
               timezone = ?, notes = ?, updated_at = datetime('now')
         WHERE id = ?`,
       name,
       provider,
       category,
+      accountNumber,
       arrivalStart,
       arrivalEnd,
       target,

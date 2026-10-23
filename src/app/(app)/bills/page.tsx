@@ -1,9 +1,10 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { BillStatusBadge, HealthBadge, InvoiceBadge, PaymentBadge } from "@/components/badges";
 import { EmptyState, Flash, PageHeader } from "@/components/ui";
 import { currentMonthKey, dateForDay, formatDate, formatMonth } from "@/lib/dates";
 import { ensureCycles } from "@/lib/engine";
-import { listBillsWithMeta } from "@/lib/queries";
+import { groupBillsByProvider, listBillsWithMeta } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ export default async function BillsPage({
           bill.category.toLowerCase().includes(query),
       )
     : allBills;
+  const groups = groupBillsByProvider(bills);
 
   const active = allBills.filter((bill) => bill.status === "active").length;
   const paused = allBills.filter((bill) => bill.status === "paused").length;
@@ -105,54 +107,68 @@ export default async function BillsPage({
                 </tr>
               </thead>
               <tbody>
-                {bills.map((bill) => (
-                  <tr
-                    key={bill.id}
-                    className="border-b border-slate-200/70 transition last:border-b-0 hover:bg-slate-50"
-                  >
-                    <td className="td">
-                      <Link
-                        href={`/bills/${bill.id}`}
-                        className="font-medium text-slate-900 hover:text-indigo-700"
+                {groups.map((group) => (
+                  <Fragment key={group.provider}>
+                    <tr className="bg-slate-50">
+                      <td
+                        colSpan={8}
+                        className="px-5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500"
                       >
-                        {bill.name}
-                      </Link>
-                      <p className="text-[11px] text-slate-500">
-                        {bill.provider} · {bill.category}
-                      </p>
-                    </td>
-                    <td className="td">
-                      <p className="text-xs text-slate-700">
-                        Arrival {bill.arrival_start_day}–{bill.arrival_end_day}
-                      </p>
-                      <p className="text-[11px] text-slate-500">
-                        Target {formatDate(dateForDay(month, bill.payment_target_day))}
-                      </p>
-                    </td>
-                    <td className="td">
-                      {bill.cycle ? <InvoiceBadge status={bill.cycle.invoice_status} /> : "—"}
-                    </td>
-                    <td className="td">
-                      {bill.cycle ? <PaymentBadge status={bill.cycle.payment_status} /> : "—"}
-                    </td>
-                    <td className="td">
-                      <HealthBadge health={bill.health} />
-                    </td>
-                    <td className="td">
-                      <span className="text-slate-700">{bill.recipient_count}</span>
-                      <span className="ml-1 text-[11px] text-slate-500">
-                        / {bill.rule_count} rules
-                      </span>
-                    </td>
-                    <td className="td">
-                      <BillStatusBadge status={bill.status} />
-                    </td>
-                    <td className="td text-right">
-                      <Link href={`/bills/${bill.id}`} className="btn btn-secondary btn-xs">
-                        Open
-                      </Link>
-                    </td>
-                  </tr>
+                        {group.provider} · {group.bills.length} bill
+                        {group.bills.length === 1 ? "" : "s"}
+                      </td>
+                    </tr>
+                    {group.bills.map((bill) => (
+                      <tr
+                        key={bill.id}
+                        className="border-b border-slate-200/70 transition last:border-b-0 hover:bg-slate-50"
+                      >
+                        <td className="td">
+                          <Link
+                            href={`/bills/${bill.id}`}
+                            className="font-medium text-slate-900 hover:text-indigo-700"
+                          >
+                            {bill.name}
+                          </Link>
+                          <p className="text-[11px] text-slate-500">
+                            {bill.provider} · {bill.category}
+                            {bill.account_number ? ` · A/C ${bill.account_number}` : ""}
+                          </p>
+                        </td>
+                        <td className="td">
+                          <p className="text-xs text-slate-700">
+                            Arrival {bill.arrival_start_day}–{bill.arrival_end_day}
+                          </p>
+                          <p className="text-[11px] text-slate-500">
+                            Target {formatDate(dateForDay(month, bill.payment_target_day))}
+                          </p>
+                        </td>
+                        <td className="td">
+                          {bill.cycle ? <InvoiceBadge status={bill.cycle.invoice_status} /> : "—"}
+                        </td>
+                        <td className="td">
+                          {bill.cycle ? <PaymentBadge status={bill.cycle.payment_status} /> : "—"}
+                        </td>
+                        <td className="td">
+                          <HealthBadge health={bill.health} />
+                        </td>
+                        <td className="td">
+                          <span className="text-slate-700">{bill.recipient_count}</span>
+                          <span className="ml-1 text-[11px] text-slate-500">
+                            / {bill.rule_count} rules
+                          </span>
+                        </td>
+                        <td className="td">
+                          <BillStatusBadge status={bill.status} />
+                        </td>
+                        <td className="td text-right">
+                          <Link href={`/bills/${bill.id}`} className="btn btn-secondary btn-xs">
+                            Open
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </Fragment>
                 ))}
               </tbody>
             </table>

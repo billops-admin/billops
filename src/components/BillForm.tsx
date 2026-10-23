@@ -63,6 +63,18 @@ export default function BillForm({
             />
           </div>
           <div>
+            <label className="label" htmlFor="account_number">
+              Account number (optional)
+            </label>
+            <input
+              id="account_number"
+              name="account_number"
+              className="input"
+              defaultValue={bill?.account_number ?? ""}
+              placeholder="e.g. 991800981"
+            />
+          </div>
+          <div>
             <label className="label" htmlFor="category">
               Category
             </label>

@@ -21,6 +21,7 @@ import {
 import { ensureCycles } from "@/lib/engine";
 import {
   getDashboardData,
+  groupBillsByProvider,
   listMonthKeysWithCycles,
   type BillWithMeta,
   type HistoryWithBill,
@@ -57,7 +58,10 @@ function BillQuickRow({ bill, month }: { bill: BillWithMeta; month: string }) {
           >
             {bill.name}
           </Link>
-          <span className="text-[11px] text-slate-500">{bill.category}</span>
+          <span className="text-[11px] text-slate-500">
+            {bill.category}
+            {bill.account_number ? ` · A/C ${bill.account_number}` : ""}
+          </span>
           {bill.status !== "active" ? <BillStatusBadge status={bill.status} /> : null}
         </div>
         <p className="mt-0.5 text-xs text-slate-500">
@@ -96,7 +100,7 @@ export default async function DashboardPage({
     : currentMonth;
   const isCurrentMonth = month === currentMonth;
 
-  if (isCurrentMonth) ensureCycles(month);
+  ensureCycles(month);
 
   const data = getDashboardData(month);
   const progress = data.totals.activeBills
@@ -106,6 +110,7 @@ export default async function DashboardPage({
     [...monthOptions(12), ...listMonthKeysWithCycles(24)],
     [month],
   );
+  const billGroups = groupBillsByProvider(data.bills);
 
   return (
     <div className="space-y-7">
@@ -239,7 +244,7 @@ export default async function DashboardPage({
           <div className="border-b border-slate-200/70 px-5 py-4 sm:px-6">
             <SectionTitle
               title="Needs attention"
-              description="Overdue payments, delayed invoices, approvals and payment targets reached."
+              description="Awaited invoices, overdue payments, approvals and payment targets reached."
               action={
                 <Link href="/cycles" className="btn btn-ghost btn-xs">
                   View cycles
@@ -400,8 +405,20 @@ export default async function DashboardPage({
           </div>
         ) : (
           <div>
-            {data.bills.map((bill) => (
-              <BillQuickRow key={bill.id} bill={bill} month={month} />
+            {billGroups.map((group) => (
+              <div key={group.provider}>
+                <div className="flex items-center justify-between border-b border-slate-200/70 bg-slate-50/80 px-4 py-1.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                    {group.provider}
+                  </span>
+                  <span className="text-[11px] text-slate-400">
+                    {group.bills.length} bill{group.bills.length === 1 ? "" : "s"}
+                  </span>
+                </div>
+                {group.bills.map((bill) => (
+                  <BillQuickRow key={bill.id} bill={bill} month={month} />
+                ))}
+              </div>
             ))}
           </div>
         )}

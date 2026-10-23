@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS bills (
   name TEXT NOT NULL,
   provider TEXT NOT NULL,
   category TEXT NOT NULL,
+  account_number TEXT,
   arrival_start_day INTEGER NOT NULL,
   arrival_end_day INTEGER NOT NULL,
   payment_target_day INTEGER NOT NULL,
@@ -162,14 +163,15 @@ function insertSeedBill(db: DatabaseSync, bill: SeedBill, month: string): number
   const result = db
     .prepare(
       `INSERT INTO bills (
-        name, provider, category, arrival_start_day, arrival_end_day,
+        name, provider, category, account_number, arrival_start_day, arrival_end_day,
         payment_target_day, payment_deadline_day, notes, status, is_active
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', 1)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 1)`,
     )
     .run(
       bill.name,
       bill.provider,
       bill.category,
+      bill.accountNumber ?? null,
       bill.arrivalStartDay,
       bill.arrivalEndDay,
       bill.paymentTargetDay,
@@ -441,11 +443,112 @@ function migrateApprovalWorkflowV1(db: DatabaseSync) {
   }
 }
 
+function migrateBillAccountNumberV1(db: DatabaseSync) {
+  const marker = db
+    .prepare("SELECT value FROM app_meta WHERE key = 'bill_account_number_v1'")
+    .get() as { value: string } | undefined;
+  if (marker) return;
+
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const columns = db.prepare("PRAGMA table_info(bills)").all() as { name: string }[];
+    if (!columns.some((column) => column.name === "account_number")) {
+      db.exec("ALTER TABLE bills ADD COLUMN account_number TEXT");
+    }
+    db.prepare(
+      "INSERT OR REPLACE INTO app_meta (key, value, updated_at) VALUES ('bill_account_number_v1', 'done', datetime('now'))",
+    ).run();
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+}
+
+function migrateTataAccountsV1(db: DatabaseSync) {
+  const marker = db
+    .prepare("SELECT value FROM app_meta WHERE key = 'tata_accounts_v1'")
+    .get() as { value: string } | undefined;
+  if (marker) return;
+
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const accountBills = SEED_BILLS.filter((bill) => bill.accountNumber);
+    const month = currentMonthKey();
+
+    const generic = db
+      .prepare("SELECT id FROM bills WHERE name = 'Tata' AND account_number IS NULL")
+      .get() as { id: number } | undefined;
+    if (generic) {
+      db.prepare("DELETE FROM bills WHERE id = ?").run(generic.id);
+    }
+
+    for (const bill of accountBills) {
+      const existing = db
+        .prepare("SELECT id FROM bills WHERE account_number = ?")
+        .get(bill.accountNumber as string) as { id: number } | undefined;
+      if (!existing) insertSeedBill(db, bill, month);
+    }
+
+    db.prepare(
+      "INSERT OR REPLACE INTO app_meta (key, value, updated_at) VALUES ('tata_accounts_v1', 'done', datetime('now'))",
+    ).run();
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+}
+
+function migratePaidStatusAudienceV1(db: DatabaseSync) {
+  const marker = db
+    .prepare("SELECT value FROM app_meta WHERE key = 'paid_status_audience_v1'")
+    .get() as { value: string } | undefined;
+  if (marker) return;
+
+  const audience = ["sandeep.lohani@doubletick.io", "nishant@quicksell.co"];
+
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const bills = db.prepare("SELECT id FROM bills").all() as { id: number }[];
+    const insertRecipient = db.prepare(`
+      INSERT OR IGNORE INTO bill_recipients (
+        bill_id, email, recipient_type, receive_reminders,
+        receive_invoice, receive_approval, receive_payment, receive_overdue, receive_paid,
+        receive_status_updates, is_active
+      ) VALUES (?, ?, 'to', 1, 0, 0, 0, 0, 1, 1, 1)
+    `);
+    const updateRecipient = db.prepare(`
+      UPDATE bill_recipients
+         SET receive_paid = 1, receive_status_updates = 1, is_active = 1
+       WHERE bill_id = ? AND email = ?
+    `);
+
+    for (const bill of bills) {
+      for (const email of audience) {
+        insertRecipient.run(bill.id, email);
+        updateRecipient.run(bill.id, email);
+      }
+    }
+
+    db.prepare(
+      "INSERT OR REPLACE INTO app_meta (key, value, updated_at) VALUES ('paid_status_audience_v1', 'done', datetime('now'))",
+    ).run();
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+}
+
 function migrate(db: DatabaseSync) {
   migratePaidConfirmation(db);
   migrateBillingV2(db);
   migrateRecipientEventsV1(db);
   migrateApprovalWorkflowV1(db);
+  migrateBillAccountNumberV1(db);
+  migrateTataAccountsV1(db);
+  migratePaidStatusAudienceV1(db);
 }
 
 export function getDb(): DatabaseSync {

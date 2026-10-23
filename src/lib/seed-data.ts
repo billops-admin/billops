@@ -52,6 +52,7 @@ export type SeedBill = {
   name: string;
   provider: string;
   category: string;
+  accountNumber?: string;
   arrivalStartDay: number;
   arrivalEndDay: number;
   paymentTargetDay: number;
@@ -107,7 +108,35 @@ function standardRules(arrivalEnd: number, target: number, deadline: number) {
   ];
 }
 
-export const SEED_BILLS: SeedBill[] = [
+export const TATA_ACCOUNT_NUMBERS = [
+  "991801663",
+  "991795281",
+  "991801197",
+  "991801099",
+  "991800981",
+];
+
+function tataBill(accountNumber: string): SeedBill {
+  return {
+    name: `Tata ${accountNumber}`,
+    provider: "Tata",
+    category: "Telecom",
+    accountNumber,
+    arrivalStartDay: 1,
+    arrivalEndDay: 10,
+    paymentTargetDay: 18,
+    paymentDeadlineDay: 20,
+    recipients: [
+      to(NISHANT, { invoice: true, status: true }),
+      to(FINANCE, { invoice: true, status: true }),
+      to(SANDEEP, { invoice: true, approval: true, overdue: true, paid: true, status: true }),
+      to(JATIN, { payment: true, overdue: true, status: true }),
+    ],
+    rules: standardRules(10, 18, 20),
+  };
+}
+
+const RAW_SEED_BILLS: SeedBill[] = [
   {
     name: "Attendance Server",
     provider: "Attendance Server",
@@ -165,22 +194,7 @@ export const SEED_BILLS: SeedBill[] = [
     ],
     rules: standardRules(4, 5, 8),
   },
-  {
-    name: "Tata",
-    provider: "Tata",
-    category: "Telecom",
-    arrivalStartDay: 1,
-    arrivalEndDay: 10,
-    paymentTargetDay: 18,
-    paymentDeadlineDay: 20,
-    recipients: [
-      to(NISHANT, { invoice: true, status: true }),
-      to(FINANCE, { invoice: true, status: true }),
-      to(SANDEEP, { invoice: true, approval: true, overdue: true, paid: true, status: true }),
-      to(JATIN, { payment: true, overdue: true, status: true }),
-    ],
-    rules: standardRules(10, 18, 20),
-  },
+  ...TATA_ACCOUNT_NUMBERS.map(tataBill),
   {
     name: "Airtel Mobile",
     provider: "Airtel",
@@ -352,3 +366,31 @@ export const SEED_BILLS: SeedBill[] = [
     ],
   },
 ];
+
+const PAID_STATUS_AUDIENCE = [SANDEEP, NISHANT];
+
+function ensurePaidStatusAudience(bill: SeedBill): SeedBill {
+  const recipients = bill.recipients.map((recipient) => ({ ...recipient }));
+  for (const email of PAID_STATUS_AUDIENCE) {
+    const existing = recipients.find((recipient) => recipient.email === email);
+    if (existing) {
+      existing.paid = true;
+      existing.statusUpdates = true;
+      continue;
+    }
+    recipients.push({
+      email,
+      type: "to",
+      reminders: true,
+      statusUpdates: true,
+      invoice: false,
+      approval: false,
+      payment: false,
+      overdue: false,
+      paid: true,
+    });
+  }
+  return { ...bill, recipients };
+}
+
+export const SEED_BILLS: SeedBill[] = RAW_SEED_BILLS.map(ensurePaidStatusAudience);

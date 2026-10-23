@@ -25,6 +25,7 @@ export type Bill = {
   name: string;
   provider: string;
   category: string;
+  account_number: string | null;
   arrival_start_day: number;
   arrival_end_day: number;
   payment_target_day: number;

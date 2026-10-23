@@ -49,7 +49,7 @@ export default async function CyclesPage({
     ? (params.month as string)
     : currentMonthKey();
 
-  if (month === currentMonthKey()) ensureCycles(month);
+  ensureCycles(month);
 
   const today = zonedToday().iso;
   const allCycles = listCycles(month).map((cycle) => ({
