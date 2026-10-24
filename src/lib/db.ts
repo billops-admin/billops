@@ -506,7 +506,7 @@ function migratePaidStatusAudienceV1(db: DatabaseSync) {
     .get() as { value: string } | undefined;
   if (marker) return;
 
-  const audience = ["sandeep.lohani@doubletick.io", "nishant@quicksell.co"];
+  const audience = ["sandeep.lohani@doubletick.io", "finance@quicksell.co"];
 
   db.exec("BEGIN IMMEDIATE");
   try {
@@ -541,6 +541,50 @@ function migratePaidStatusAudienceV1(db: DatabaseSync) {
   }
 }
 
+function migratePaidStatusAudienceV2(db: DatabaseSync) {
+  const marker = db
+    .prepare("SELECT value FROM app_meta WHERE key = 'paid_status_audience_v2'")
+    .get() as { value: string } | undefined;
+  if (marker) return;
+
+  const finance = "finance@quicksell.co";
+
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.prepare("DELETE FROM bill_recipients WHERE lower(email) = 'nishant@quicksell.co'").run();
+    db.prepare(
+      "DELETE FROM notification_outbox WHERE lower(recipient_email) = 'nishant@quicksell.co' AND status = 'pending'",
+    ).run();
+
+    const bills = db.prepare("SELECT id FROM bills").all() as { id: number }[];
+    const insertRecipient = db.prepare(`
+      INSERT OR IGNORE INTO bill_recipients (
+        bill_id, email, recipient_type, receive_reminders,
+        receive_invoice, receive_approval, receive_payment, receive_overdue, receive_paid,
+        receive_status_updates, is_active
+      ) VALUES (?, ?, 'to', 1, 0, 0, 0, 0, 1, 1, 1)
+    `);
+    const updateRecipient = db.prepare(`
+      UPDATE bill_recipients
+         SET receive_paid = 1, receive_status_updates = 1, is_active = 1
+       WHERE bill_id = ? AND email = ?
+    `);
+
+    for (const bill of bills) {
+      insertRecipient.run(bill.id, finance);
+      updateRecipient.run(bill.id, finance);
+    }
+
+    db.prepare(
+      "INSERT OR REPLACE INTO app_meta (key, value, updated_at) VALUES ('paid_status_audience_v2', 'done', datetime('now'))",
+    ).run();
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+}
+
 function migrate(db: DatabaseSync) {
   migratePaidConfirmation(db);
   migrateBillingV2(db);
@@ -549,6 +593,7 @@ function migrate(db: DatabaseSync) {
   migrateBillAccountNumberV1(db);
   migrateTataAccountsV1(db);
   migratePaidStatusAudienceV1(db);
+  migratePaidStatusAudienceV2(db);
 }
 
 export function getDb(): DatabaseSync {

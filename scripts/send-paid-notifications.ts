@@ -7,7 +7,7 @@ import type { Bill, BillCycle } from "../src/lib/types";
 
 loadEnv();
 
-const AUDIENCE = ["sandeep.lohani@doubletick.io", "nishant@quicksell.co"];
+const AUDIENCE = ["sandeep.lohani@doubletick.io", "finance@quicksell.co"];
 
 async function main() {
   const monthArg = process.argv[2];

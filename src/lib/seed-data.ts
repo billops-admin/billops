@@ -14,7 +14,6 @@ export type SeedRecipient = {
 
 const SANDEEP = "sandeep.lohani@doubletick.io";
 const BHUMIK = "bhumik@quicksell.co";
-const NISHANT = "nishant@quicksell.co";
 const FINANCE = "finance@quicksell.co";
 const JATIN = "jatin.tank@quicksell.co";
 const VATSAL = "vatsal.shah@doubletick.com";
@@ -127,7 +126,6 @@ function tataBill(accountNumber: string): SeedBill {
     paymentTargetDay: 18,
     paymentDeadlineDay: 20,
     recipients: [
-      to(NISHANT, { invoice: true, status: true }),
       to(FINANCE, { invoice: true, status: true }),
       to(SANDEEP, { invoice: true, approval: true, overdue: true, paid: true, status: true }),
       to(JATIN, { payment: true, overdue: true, status: true }),
@@ -167,7 +165,7 @@ const RAW_SEED_BILLS: SeedBill[] = [
     paymentTargetDay: 3,
     paymentDeadlineDay: 5,
     recipients: [
-      to(NISHANT, { invoice: true, status: true }),
+      to(FINANCE, { invoice: true, status: true }),
       to(SANDEEP, {
         invoice: true,
         approval: true,
@@ -367,7 +365,7 @@ const RAW_SEED_BILLS: SeedBill[] = [
   },
 ];
 
-const PAID_STATUS_AUDIENCE = [SANDEEP, NISHANT];
+const PAID_STATUS_AUDIENCE = [SANDEEP, FINANCE];
 
 function ensurePaidStatusAudience(bill: SeedBill): SeedBill {
   const recipients = bill.recipients.map((recipient) => ({ ...recipient }));
