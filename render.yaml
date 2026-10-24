@@ -8,19 +8,14 @@ services:
   - type: web
     name: billops
     runtime: node
-    plan: 0.5c-512mb
+    plan: free
     numInstances: 1
     buildCommand: npm ci --include=dev && npm run build
-    startCommand: npm run start
+    startCommand: npm run backfill -- 2026-08 2026-10 && npm run start
     healthCheckPath: /api/health
-    initialDeployHook: npm run backfill -- 2026-08 2026-10
     envVars:
       - key: NODE_VERSION
         value: "24"
-      - key: BILLOPS_DB_PATH
-        value: /var/data/billops.db
-      - key: BILLOPS_OUTBOX_DIR
-        value: /var/data/outbox
       - key: BILLOPS_SEED_CATALOG
         value: "true"
       - key: BILLOPS_PENDING_BILLS
@@ -45,22 +40,4 @@ services:
         sync: false
       - key: SMTP_FROM
         sync: false
-      - fromGroup: billops-internal
-    disk:
-      name: billops-data
-      mountPath: /var/data
-      sizeGB: 1
-
-  - type: cron
-    name: billops-scheduler
-    runtime: node
-    schedule: "*/15 * * * *"
-    buildCommand: npm ci --include=dev
-    startCommand: node scripts/cron-run.mjs
-    envVars:
-      - key: BILLOPS_WEB_HOSTPORT
-        fromService:
-          type: web
-          name: billops
-          property: hostport
       - fromGroup: billops-internal
